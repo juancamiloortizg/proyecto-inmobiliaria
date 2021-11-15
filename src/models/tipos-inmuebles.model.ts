@@ -33,6 +33,10 @@ export class TiposInmuebles extends Entity {
   })
   porcentajeParticipacionCompra: number;
 
+  @property({
+    type: 'string',
+  })
+  inmuebleId?: string;
 
   constructor(data?: Partial<TiposInmuebles>) {
     super(data);

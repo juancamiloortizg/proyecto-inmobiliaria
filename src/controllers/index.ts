@@ -8,3 +8,6 @@ export * from './solicitud.controller';
 export * from './asesor.controller';
 export * from './tipos-inmuebles.controller';
 export * from './administrador.controller';
+export * from './inmueble-tipos-inmuebles.controller';
+export * from './inmueble-asesor.controller';
+export * from './asesor-inmueble.controller';
