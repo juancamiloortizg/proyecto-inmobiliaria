@@ -1,3 +1,4 @@
+import { service } from '@loopback/core';
 import {
   Count,
   CountSchema,
@@ -19,11 +20,15 @@ import {
 } from '@loopback/rest';
 import {Administrador} from '../models';
 import {AdministradorRepository} from '../repositories';
+import { AutenticacionService } from '../services';
+const fetch = require('node-fetch');
 
 export class AdministradorController {
   constructor(
     @repository(AdministradorRepository)
     public administradorRepository : AdministradorRepository,
+    @service(AutenticacionService)
+    public servicioAutenticacion: AutenticacionService
   ) {}
 
   @post('/administradores')
@@ -44,7 +49,22 @@ export class AdministradorController {
     })
     administrador: Omit<Administrador, 'id'>,
   ): Promise<Administrador> {
-    return this.administradorRepository.create(administrador);
+
+    let contrasena = this.servicioAutenticacion.GenerarContrasena();
+    let contrasenaCifrada = this.servicioAutenticacion.CifrarContrasena(contrasena);
+    administrador.contrasena = contrasenaCifrada;
+    let p = await this.administradorRepository.create(administrador);
+
+    //Notificar
+    let destino = administrador.email;
+    let asunto = 'Registro en la plataforma';
+    let contenito = `Hola ${administrador.nombres}, su nombre de usuario es: ${administrador.email} y su contraseña es: ${contrasena}.`;
+    fetch(`http://127.0.0.1:5000/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenito}`)
+     .then((data:any) =>{
+       console.log(data);
+     })
+    return p;
+
   }
 
   @get('/administradores/count')
