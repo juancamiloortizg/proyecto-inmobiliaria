@@ -1,35 +1,56 @@
-import { service } from '@loopback/core';
+import {service} from '@loopback/core';
 import {
   Count,
   CountSchema,
   Filter,
   FilterExcludingWhere,
   repository,
-  Where,
+  Where
 } from '@loopback/repository';
 import {
-  post,
-  param,
-  get,
-  getModelSchemaRef,
-  patch,
-  put,
-  del,
-  requestBody,
-  response,
+  del, get,
+  getModelSchemaRef, HttpErrors, param, patch, post, put, requestBody,
+  response
 } from '@loopback/rest';
-import {Administrador} from '../models';
+import {Llaves} from '../config/llaves';
+import {Administrador, Credenciales} from '../models';
 import {AdministradorRepository} from '../repositories';
-import { AutenticacionService } from '../services';
+import {AutenticacionService} from '../services';
 const fetch = require('node-fetch');
 
 export class AdministradorController {
   constructor(
     @repository(AdministradorRepository)
-    public administradorRepository : AdministradorRepository,
+    public administradorRepository: AdministradorRepository,
     @service(AutenticacionService)
     public servicioAutenticacion: AutenticacionService
-  ) {}
+  ) { }
+
+  @post("/identificarAdministrador", {
+    responses: {
+      '200': {
+        description: "Identificador de Administradores"
+      }
+    }
+  })
+  async identificarAdministrador(
+    @requestBody() credenciales: Credenciales
+  ) {
+    let p = await this.servicioAutenticacion.IdentificarAdministrador(credenciales.usuario, credenciales.clave);
+    if (p) {
+      let token = this.servicioAutenticacion.GenerarTokenJWTADM(p);
+      return {
+        datos: {
+          nombres: p.nombres,
+          email: p.email,
+          id: p.id
+        },
+        tk: token
+      }
+    } else {
+      throw new HttpErrors[401]("Datos invalidos");
+    }
+  }
 
   @post('/administradores')
   @response(200, {
@@ -59,10 +80,10 @@ export class AdministradorController {
     let destino = administrador.email;
     let asunto = 'Registro en la plataforma';
     let contenito = `Hola ${administrador.nombres}, su nombre de usuario es: ${administrador.email} y su contraseña es: ${contrasena}.`;
-    fetch(`http://127.0.0.1:5000/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenito}`)
-     .then((data:any) =>{
-       console.log(data);
-     })
+    fetch(`${Llaves.urlServicioNotificaciones}/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenito}`)
+      .then((data: any) => {
+        console.log(data);
+      })
     return p;
 
   }

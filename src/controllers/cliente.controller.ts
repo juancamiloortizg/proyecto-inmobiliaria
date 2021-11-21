@@ -1,36 +1,57 @@
-import { service } from '@loopback/core';
+import {service} from '@loopback/core';
 import {
   Count,
   CountSchema,
   Filter,
   FilterExcludingWhere,
   repository,
-  Where,
+  Where
 } from '@loopback/repository';
 import {
-  post,
-  param,
-  get,
-  getModelSchemaRef,
-  patch,
-  put,
-  del,
-  requestBody,
-  response,
+  del, get,
+  getModelSchemaRef, HttpErrors, param, patch, post, put, requestBody,
+  response
 } from '@loopback/rest';
-import {Cliente} from '../models';
+import {Llaves} from '../config/llaves';
+import {Cliente, Credenciales} from '../models';
 import {ClienteRepository} from '../repositories';
-import { AutenticacionService } from '../services';
+import {AutenticacionService} from '../services';
 const fetch = require('node-fetch');
 
 export class ClienteController {
   constructor(
     @repository(ClienteRepository)
-    public clienteRepository : ClienteRepository,
+    public clienteRepository: ClienteRepository,
     @service(AutenticacionService)
     public servicioAutenticacion: AutenticacionService
-  ) {}
+  ) { }
 
+  @post("/identificarClientes", {
+    responses: {
+      '200': {
+        description: "Identificador de Clientes"
+      }
+    }
+  })
+
+  async identificarCliente(
+    @requestBody() credenciales: Credenciales
+  ) {
+    let p = await this.servicioAutenticacion.IdentificarCliente(credenciales.usuario, credenciales.clave);
+    if (p) {
+      let token = this.servicioAutenticacion.GenerarTokenJWTADM(p);
+      return {
+        datos: {
+          nombres: p.nombres,
+          email: p.email,
+          id: p.id
+        },
+        tk: token
+      }
+    } else {
+      throw new HttpErrors[401]("Datos invalidos");
+    }
+  }
   @post('/clientes')
   @response(200, {
     description: 'Cliente model instance',
@@ -59,10 +80,10 @@ export class ClienteController {
     let destino = cliente.email;
     let asunto = 'Registro en la plataforma';
     let contenito = `Hola ${cliente.nombres}, su nombre de usuario es: ${cliente.email} y su contraseña es: ${contrasena}.`;
-    fetch(`http://127.0.0.1:5000/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenito}`)
-     .then((data:any) =>{
-       console.log(data);
-     })
+    fetch(`${Llaves.urlServicioNotificaciones}/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenito}`)
+      .then((data: any) => {
+        console.log(data);
+      })
     return p;
   }
 

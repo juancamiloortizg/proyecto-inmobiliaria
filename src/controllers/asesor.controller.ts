@@ -1,35 +1,61 @@
-import { service } from '@loopback/core';
+import {service} from '@loopback/core';
 import {
   Count,
   CountSchema,
   Filter,
   FilterExcludingWhere,
   repository,
-  Where,
+  Where
 } from '@loopback/repository';
 import {
-  post,
-  param,
-  get,
-  getModelSchemaRef,
-  patch,
-  put,
-  del,
-  requestBody,
-  response,
+  del, get,
+  getModelSchemaRef, HttpErrors, param, patch, post, put, requestBody,
+  response
 } from '@loopback/rest';
-import {Asesor} from '../models';
+import {Llaves} from '../config/llaves';
+import {Asesor, Credenciales} from '../models';
 import {AsesorRepository} from '../repositories';
-import { AutenticacionService } from '../services';
+import {AutenticacionService} from '../services';
 const fetch = require('node-fetch');
 
 export class AsesorController {
   constructor(
     @repository(AsesorRepository)
-    public asesorRepository : AsesorRepository,
+    public asesorRepository: AsesorRepository,
     @service(AutenticacionService)
     public servicioAutenticacion: AutenticacionService
-  ) {}
+  ) { }
+
+
+  @post("/identificarUsuario", {
+    responses: {
+      '200': {
+        description: "Identificador de usuarios"
+      }
+    }
+  })
+
+
+  async identificarAsesor(
+    @requestBody() credenciales: Credenciales
+  ) {
+    let p = await this.servicioAutenticacion.IdentificarAsesor(credenciales.usuario, credenciales.clave);
+    if (p) {
+      let token = this.servicioAutenticacion.GenerarTokenJWTADM(p);
+      return {
+        datos: {
+          nombres: p.nombres,
+          email: p.email,
+          id: p.id
+        },
+        tk: token
+      }
+    } else {
+      throw new HttpErrors[401]("Datos invalidos");
+    }
+  }
+
+
 
   @post('/asesores')
   @response(200, {
@@ -59,10 +85,10 @@ export class AsesorController {
     let destino = asesor.email;
     let asunto = 'Registro en la plataforma';
     let contenito = `Hola ${asesor.nombres}, su nombre de usuario es: ${asesor.email} y su contraseña es: ${contrasena}.`;
-    fetch(`http://127.0.0.1:5000/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenito}`)
-     .then((data:any) =>{
-       console.log(data);
-     })
+    fetch(`${Llaves.urlServicioNotificaciones}/envio-correo?correo_destino=${destino}&asunto=${asunto}&contenido=${contenito}`)
+      .then((data: any) => {
+        console.log(data);
+      })
     return p;
   }
 
